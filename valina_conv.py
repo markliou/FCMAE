@@ -8,7 +8,7 @@ def valina_fc_ae():
     Input: 500x500x3
     Output: 500x500x3
     """
-    x = tf.keras.layers.Input(shape=(500, 500,3))
+    x = tf.keras.layers.Input(shape=(256, 256,3))
     conv1 = tf.keras.layers.Conv2D(64, (3,3), strides=(2,2), activation='relu', padding='same')(x)
     conv1 = tf.keras.layers.Conv2D(64, (3,3), strides=(1,1), activation='relu', padding='same')(conv1)
     conv2 = tf.keras.layers.Conv2D(128, (3,3), strides=(2,2), activation='relu', padding='same')(conv1)
