@@ -17,6 +17,19 @@ def concept_gated_conv_ae():
     return tf.keras.Model(x, out)
     pass
 
+def concept_extract_conv():
+    pass
+
+def concept_injection_conv():
+    pass
+
+def gated_conv(x):
+    denseConcept = tf.keras.layers.Conv2D
+    pass
+
+def mish(x):
+    return x * tf.math.tanh(tf.math.softplus(x))
+
 def main():
     pass
 
