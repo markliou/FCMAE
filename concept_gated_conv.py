@@ -81,6 +81,28 @@ def concept_gated_conv(x, concept, kernel_size, channel_no):
 def mish(x):
     return x * tf.math.tanh(tf.math.softplus(x))
 
+def masking_img(imgs, split=(8,8), masking_ratio = 0.75):
+    totalIndexNo = split[0] * split[1]
+    candidateNo = int(totalIndexNo * (1 - masking_ratio))
+    h_size = imgs.shape[1] // split[0]
+    w_size = imgs.shape[2] // split[1]
+    
+    def gen_mask():
+        mask = np.zeros([imgs.shape[1], imgs.shape[2]])
+        patch_index = tf.random.shuffle([i for i in range(totalIndexNo)])[:candidateNo]
+        
+        for n in patch_index:
+            x = (n // split[0]) * h_size
+            y = (n % split[1]) * w_size
+            mask[int(x):int(x + h_size), int(y):int(y+ w_size)] = 1
+        np.reshape(mask, [imgs.shape[1], imgs.shape[2], 1])
+        return np.reshape(mask, [imgs.shape[1], imgs.shape[2], 1])
+    
+    masks = [gen_mask() for i in range(imgs.shape[0])]
+    return tf.stack(masks, axis=0)
+
+
+
 def main():
     model = concept_gated_conv_ae()
     model.summary()
