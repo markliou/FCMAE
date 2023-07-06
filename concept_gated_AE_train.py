@@ -29,6 +29,7 @@ opt_steps = 5000
 for step in range(opt_steps):
     def ae_loss():
         ds = tf.image.resize(next(dsIter)['image'], (256, 256)) 
+        masked_ds = concept_gated_conv.masking_img(ds)
         ds = (ds - 128.) / 256.
         ae_loss = tf.keras.losses.MeanSquaredError()(cgae(ds), ds)
         total_loss = ae_loss + tf.reduce_sum(cgae.losses)
