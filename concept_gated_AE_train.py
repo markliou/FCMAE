@@ -40,7 +40,8 @@ for step in range(opt_steps):
         
         masked_ds = concept_gated_conv.masking_img(ds)
         ds = (ds - 128.) / 256.
-        ae_loss = tf.keras.losses.MeanSquaredError()(cgae(ds), ds)
+        masked_ds = ((ds - 128.) / 256. - 128.) / 256.
+        ae_loss = tf.keras.losses.MeanSquaredError()(cgae(masked_ds), ds)
         total_loss = ae_loss + tf.reduce_sum(cgae.losses)
         print(total_loss)
         return total_loss
