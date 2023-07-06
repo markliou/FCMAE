@@ -98,8 +98,8 @@ def masking_img(imgs, split=(8,8), masking_ratio = 0.75):
         np.reshape(mask, [imgs.shape[1], imgs.shape[2], 1])
         return np.reshape(mask, [imgs.shape[1], imgs.shape[2], 1])
     
-    masks = [gen_mask() for i in range(imgs.shape[0])]
-    return tf.stack(masks, axis=0)
+    masks = tf.map_fn(lambda x: gen_mask(), tf.ones([imgs.shape[0]]))
+    return masks
 
 
 
