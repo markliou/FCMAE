@@ -23,7 +23,7 @@ def bean_img_iter(bs = 32):
 
 dsIter = bean_img_iter(32)
 cgae = concept_gated_conv.concept_gated_conv_ae()
-opt = tf.keras.optimizers.AdamW(learning_rate=1e-4, global_clipnorm=1)
+opt = tf.keras.optimizers.AdamW(1e-6, global_clipnorm=1)
 opt_steps = 5000000
 
 for step in range(opt_steps):
@@ -38,9 +38,9 @@ for step in range(opt_steps):
         # ds = tf.keras.layers.RandomTranslation((.2), (.2))(ds)
         ds = tf.keras.layers.RandomZoom((.6), (.6))(ds)
         
-        masked_ds = concept_gated_conv.masking_img(ds)
+        masked_ds = concept_gated_conv.masking_img(ds) * ds
         ds = (ds - 128.) / 256.
-        masked_ds = ((ds - 128.) / 256. - 128.) / 256.
+        masked_ds = (masked_ds - 128.) / 256.
         reconstructed_img = cgae(masked_ds)
         ae_loss = tf.keras.losses.MeanSquaredError()(reconstructed_img, ds)
         total_loss = ae_loss + tf.reduce_sum(cgae.losses)
@@ -48,8 +48,10 @@ for step in range(opt_steps):
         # output
         print(total_loss)
         if step % 100 == 0:
-            img = PIL.Image.fromarray(tf.cast(reconstructed_img[0], dtype=tf.uint8).numpy())
-            img.save('current.png')
+            img_array = tf.cast(reconstructed_img[0], dtype=tf.uint8).numpy()
+            img_array = (img_array + 1 ) * 128
+            img = PIL.Image.fromarray(img_array, None)
+            img.save('current.jpg')
         return total_loss
     
     opt.minimize(loss=ae_loss, var_list=cgae.trainable_weights)
