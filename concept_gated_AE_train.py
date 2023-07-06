@@ -21,10 +21,10 @@ def bean_img_iter(bs = 32):
 
 
 
-dsIter = bean_img_iter(8)
+dsIter = bean_img_iter(32)
 cgae = concept_gated_conv.concept_gated_conv_ae()
 opt = tf.keras.optimizers.AdamW(learning_rate=1e-4, global_clipnorm=1)
-opt_steps = 5000
+opt_steps = 5000000
 
 for step in range(opt_steps):
     def ae_loss():
@@ -40,7 +40,8 @@ for step in range(opt_steps):
         
         masked_ds = concept_gated_conv.masking_img(ds)
         ds = (ds - 128.) / 256.
-        ae_loss = tf.keras.losses.MeanSquaredError()(cgae(ds), ds)
+        masked_ds = ((ds - 128.) / 256. - 128.) / 256.
+        ae_loss = tf.keras.losses.MeanSquaredError()(cgae(masked_ds), ds)
         total_loss = ae_loss + tf.reduce_sum(cgae.losses)
         print(total_loss)
         return total_loss

@@ -81,7 +81,7 @@ def concept_gated_conv(x, concept, kernel_size, channel_no):
 def mish(x):
     return x * tf.math.tanh(tf.math.softplus(x))
 
-def masking_img(imgs, split=(8,8), masking_ratio = 0.75):
+def masking_img(imgs, split=(8,8), masking_ratio = 0.9):
     totalIndexNo = split[0] * split[1]
     candidateNo = int(totalIndexNo * (1 - masking_ratio))
     h_size = imgs.shape[1] // split[0]
