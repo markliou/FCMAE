@@ -29,6 +29,15 @@ opt_steps = 5000
 for step in range(opt_steps):
     def ae_loss():
         ds = tf.image.resize(next(dsIter)['image'], (256, 256)) 
+        
+        # augmentation
+        ds = tf.keras.layers.RandomFlip("horizontal_and_vertical")(ds)
+        ds = tf.keras.layers.RandomRotation(0.2)(ds)
+        ds = tf.keras.layers.RandomBrightness(factor=0.2)(ds)
+        ds = tf.keras.layers.RandomContrast(.2)(ds)
+        # ds = tf.keras.layers.RandomTranslation((.2), (.2))(ds)
+        ds = tf.keras.layers.RandomZoom((.6), (.6))(ds)
+        
         masked_ds = concept_gated_conv.masking_img(ds)
         ds = (ds - 128.) / 256.
         ae_loss = tf.keras.losses.MeanSquaredError()(cgae(ds), ds)
