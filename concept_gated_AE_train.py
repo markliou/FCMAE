@@ -41,9 +41,15 @@ for step in range(opt_steps):
         masked_ds = concept_gated_conv.masking_img(ds)
         ds = (ds - 128.) / 256.
         masked_ds = ((ds - 128.) / 256. - 128.) / 256.
-        ae_loss = tf.keras.losses.MeanSquaredError()(cgae(masked_ds), ds)
+        reconstructed_img = cgae(masked_ds)
+        ae_loss = tf.keras.losses.MeanSquaredError()(reconstructed_img, ds)
         total_loss = ae_loss + tf.reduce_sum(cgae.losses)
+        
+        # output
         print(total_loss)
+        if step % 100 == 0:
+            img = PIL.Image.fromarray(tf.cast(reconstructed_img[0], dtype=tf.uint8).numpy())
+            img.save('current.png')
         return total_loss
     
     opt.minimize(loss=ae_loss, var_list=cgae.trainable_weights)
