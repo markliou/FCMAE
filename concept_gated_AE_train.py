@@ -21,7 +21,7 @@ def bean_img_iter(bs = 32):
 
 
 
-dsIter = bean_img_iter(8)
+dsIter = bean_img_iter(32)
 cgae = concept_gated_conv.concept_gated_conv_ae()
 opt = tf.keras.optimizers.AdamW(learning_rate=1e-4, global_clipnorm=1)
 opt_steps = 5000
