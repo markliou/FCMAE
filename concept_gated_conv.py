@@ -19,20 +19,20 @@ def concept_gated_conv_ae():
     
     # concept convolution
     conv1 = concept_conv(emb, 32)
-    conv1 = tf.keras.layers.Conv2D(32, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=tf.nn.tanh)(conv1) # down sampling 128
+    conv1 = tf.keras.layers.Conv2D(32, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(conv1) # down sampling 128
     conv2 = concept_conv(conv1, 32)
-    conv2 = tf.keras.layers.Conv2D(64, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=tf.nn.tanh)(conv2) # down sampling 64
+    conv2 = tf.keras.layers.Conv2D(64, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(conv2) # down sampling 64
     conv3 = concept_conv(conv2, 32)
-    conv3 = tf.keras.layers.Conv2D(128, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=tf.nn.tanh)(conv3) # down sampling 32
+    conv3 = tf.keras.layers.Conv2D(128, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(conv3) # down sampling 32
     
     latent = tf.keras.layers.Conv2D(256, (1,1), (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(conv3) 
     
     dconv1 = concept_conv(latent, 128)
-    dconv1 = tf.keras.layers.Conv2DTranspose(64, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=tf.nn.tanh)(dconv1) # up sampling 64
+    dconv1 = tf.keras.layers.Conv2DTranspose(64, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv1) # up sampling 64
     dconv2 = concept_conv(dconv1, 32)
-    dconv2 = tf.keras.layers.Conv2DTranspose(32, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=tf.nn.tanh)(dconv2) # up sampling 128
+    dconv2 = tf.keras.layers.Conv2DTranspose(32, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv2) # up sampling 128
     dconv3 = concept_conv(dconv2, 32)
-    dconv3 = tf.keras.layers.Conv2DTranspose(16, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=tf.nn.tanh)(dconv3) # up sampling 256
+    dconv3 = tf.keras.layers.Conv2DTranspose(16, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv3) # up sampling 256
     
     out = tf.keras.layers.Conv2D(16, (1,1), activation=tf.nn.tanh)(dconv3)
     out = tf.keras.layers.Conv2D(3, (1,1), activation=None)(out)
