@@ -23,11 +23,35 @@ def bean_img_iter(bs = 32):
 
     return dataset
 
+# warmup and decay learning rate
+def lr_warmup_cosine_decay(global_step,
+                           warmup_steps,
+                           hold = 0,
+                           total_steps=0,
+                           start_lr=0.0,
+                           target_lr=1e-3):
+    # source : https://stackabuse.com/learning-rate-warmup-with-cosine-decay-in-keras-and-tensorflow/
+    # Cosine decay
+    learning_rate = 0.5 * target_lr * (1 + np.cos(np.pi * (global_step - warmup_steps - hold) / float(total_steps - warmup_steps - hold)))
+
+    # Target LR * progress of warmup (=1 at the final warmup step)
+    warmup_lr = target_lr * (global_step / warmup_steps)
+
+    # Choose between `warmup_lr`, `target_lr` and `learning_rate` based on whether `global_step < warmup_steps` and we're still holding.
+    # i.e. warm up if we're still warming up and use cosine decayed lr otherwise
+    if hold > 0:
+        learning_rate = np.where(global_step > warmup_steps + hold,
+                                 learning_rate, target_lr)
+    
+    learning_rate = np.where(global_step < warmup_steps, warmup_lr, learning_rate)
+    return learning_rate
+
 dsIter = iter(bean_img_iter(64))
 opt_steps = 5000000
+lr = 1e-4
 with mirrored_strategy.scope():
     cgae = concept_gated_conv.concept_gated_conv_ae()
-    opt = tf.keras.optimizers.AdamW(1e-4, global_clipnorm=1)
+    opt = tf.keras.optimizers.AdamW(lr, global_clipnorm=1)
     cgae.load_weights('./models/cgae')
     
 def training_step(ds, step):
@@ -53,6 +77,7 @@ def training_step(ds, step):
         
         return total_loss
     
+    opt.lr = lr_warmup_cosine_decay(step, 100, opt_steps, target_lr=lr)
     opt.minimize(loss=ae_loss, var_list=cgae.trainable_weights)
     
     if step % 100 == 0:

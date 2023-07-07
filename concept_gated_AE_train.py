@@ -19,7 +19,28 @@ def bean_img_iter(bs = 32):
 
     return iter(dataset)
 
+# warmup and decay learning rate
+def lr_warmup_cosine_decay(global_step,
+                           warmup_steps,
+                           hold = 0,
+                           total_steps=0,
+                           start_lr=0.0,
+                           target_lr=1e-3):
+    # source : https://stackabuse.com/learning-rate-warmup-with-cosine-decay-in-keras-and-tensorflow/
+    # Cosine decay
+    learning_rate = 0.5 * target_lr * (1 + np.cos(np.pi * (global_step - warmup_steps - hold) / float(total_steps - warmup_steps - hold)))
 
+    # Target LR * progress of warmup (=1 at the final warmup step)
+    warmup_lr = target_lr * (global_step / warmup_steps)
+
+    # Choose between `warmup_lr`, `target_lr` and `learning_rate` based on whether `global_step < warmup_steps` and we're still holding.
+    # i.e. warm up if we're still warming up and use cosine decayed lr otherwise
+    if hold > 0:
+        learning_rate = np.where(global_step > warmup_steps + hold,
+                                 learning_rate, target_lr)
+    
+    learning_rate = np.where(global_step < warmup_steps, warmup_lr, learning_rate)
+    return learning_rate
 
 dsIter = bean_img_iter(32)
 cgae = concept_gated_conv.concept_gated_conv_ae()
