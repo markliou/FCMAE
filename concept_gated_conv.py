@@ -14,37 +14,37 @@ def concept_gated_conv_ae():
     enc = tf.keras.layers.Conv2D(16, (1,1), activation=mish)(x)
     
     # position embedding
-    pos = tf.random.uniform(shape=(256, 256, 16), dtype=tf.float32, minval=-1., maxval=1.)
+    pos = tf.random.uniform(shape=(256, 256, 16), dtype=tf.float32, minval=-.05, maxval=.05)
     emb = enc + pos
     
     # concept convolution
     conv1 = concept_conv(emb, 32)
-    conv1 = tf.keras.layers.Conv2D(32, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(conv1) # down sampling 128
+    conv1 = tf.keras.layers.Conv2D(32, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=tf.nn.tanh)(conv1) # down sampling 128
     conv2 = concept_conv(conv1, 32)
-    conv2 = tf.keras.layers.Conv2D(64, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(conv2) # down sampling 64
+    conv2 = tf.keras.layers.Conv2D(64, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=tf.nn.tanh)(conv2) # down sampling 64
     conv3 = concept_conv(conv2, 32)
-    conv3 = tf.keras.layers.Conv2D(128, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(conv3) # down sampling 32
+    conv3 = tf.keras.layers.Conv2D(128, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=tf.nn.tanh)(conv3) # down sampling 32
     
     latent = tf.keras.layers.Conv2D(256, (1,1), (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(conv3) 
     
     dconv1 = concept_conv(latent, 128)
-    dconv1 = tf.keras.layers.Conv2DTranspose(64, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv1) # up sampling 64
+    dconv1 = tf.keras.layers.Conv2DTranspose(64, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=tf.nn.tanh)(dconv1) # up sampling 64
     dconv2 = concept_conv(dconv1, 32)
-    dconv2 = tf.keras.layers.Conv2DTranspose(32, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv2) # up sampling 128
+    dconv2 = tf.keras.layers.Conv2DTranspose(32, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=tf.nn.tanh)(dconv2) # up sampling 128
     dconv3 = concept_conv(dconv2, 32)
-    dconv3 = tf.keras.layers.Conv2DTranspose(16, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv3) # up sampling 256
+    dconv3 = tf.keras.layers.Conv2DTranspose(16, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=tf.nn.tanh)(dconv3) # up sampling 256
     
-    out = tf.keras.layers.Conv2D(16, (1,1), activation=mish)(dconv3)
+    out = tf.keras.layers.Conv2D(16, (1,1), activation=tf.nn.tanh)(dconv3)
     out = tf.keras.layers.Conv2D(3, (1,1), activation=None)(out)
     
     return tf.keras.Model(x, out)
     pass
 
 def concept_conv(x, channel_no):
-    conv = tf.keras.layers.LayerNormalization()(x)
+    conv = tf.keras.layers.LayerNormalization(axis=-1)(x)
     conv = concept_conv_block(conv, channel_no)
     conv = tf.keras.layers.Conv2D(channel_no, (1,1), kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(conv)
-    conv = tf.keras.layers.Conv2D(channel_no, (1,1), kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(conv)
+    conv = tf.keras.layers.Conv2D(channel_no, (1,1), kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(conv)
     return conv
 
 def concept_conv_block(x, channel_no):
@@ -62,7 +62,7 @@ def concept_extract_conv(x, channel_no):
     concept5 = concept_gated_conv(x, tf.stop_gradient(blank), 5, channel_no)
     concept7 = concept_gated_conv(x, tf.stop_gradient(blank), 7, channel_no)
     concept = concept3 + concept5 + concept7
-    return tf.math.reduce_sum(concept, axis=[1, 2], keepdims=True)
+    return tf.math.reduce_mean(concept, axis=[1, 2], keepdims=True)
     pass
 
 def concept_injection_conv(x, concept, channel_no):
