@@ -49,7 +49,7 @@ for step in range(opt_steps):
         total_loss = ae_loss + tf.reduce_sum(cgae.losses)
         
         # output
-        print(total_loss)
+        print(total_loss.numpy())
         if step % 100 == 0:
             img_array = reconstructed_img[0].numpy()
             dsimg_array = ds[0].numpy()
@@ -66,6 +66,8 @@ for step in range(opt_steps):
             img.save('current.jpg')
             dsimg.save('dscurrent.jpg')
             masked_ds_img.save('ds_mased_current.jpg')
+            
+            cgae.save_weights('./models/cgae')
         return total_loss
     
     opt.minimize(loss=ae_loss, var_list=cgae.trainable_weights)
