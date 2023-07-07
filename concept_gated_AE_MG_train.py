@@ -46,15 +46,17 @@ def lr_warmup_cosine_decay(global_step,
     learning_rate = np.where(global_step < warmup_steps, warmup_lr, learning_rate)
     return learning_rate
 
-dsIter = iter(bean_img_iter(64))
+batch_size = 64
+shad_size = 2 #gpu number
 opt_steps = 5000000
 lr = 1e-4
+dsIter = iter(bean_img_iter(batch_size))
 with mirrored_strategy.scope():
     cgae = concept_gated_conv.concept_gated_conv_ae()
     opt = tf.keras.optimizers.AdamW(lr, global_clipnorm=1)
     cgae.load_weights('./models/cgae')
     
-def training_step(ds, step):
+def training_step(ds, step, batch_size, shad_size):
     ds = tf.image.resize(ds['image'], (256, 256)) 
     # augmentation
     ds = tf.keras.layers.RandomFlip("horizontal_and_vertical")(ds)
@@ -71,11 +73,11 @@ def training_step(ds, step):
         reconstructed_img = cgae(masked_ds)
         # reconstructed_img = cgae(ds)
         
-        ae_loss = tf.keras.losses.MeanSquaredError(tf.keras.losses.Reduction.SUM)(reconstructed_img, ds)
+        ae_loss = tf.keras.losses.MeanSquaredError(tf.keras.losses.Reduction.SUM)(reconstructed_img, ds) / batch_size
         # ae_loss = tf.math.reduce_mean(tf.math.pow((reconstructed_img - ds), 2))
-        total_loss = ae_loss + tf.reduce_sum(cgae.losses)
+        total_loss = ae_loss + tf.reduce_sum(cgae.losses) / shad_size
         
-        return total_loss
+        return total_loss 
     
     opt.lr = lr_warmup_cosine_decay(step, 100, opt_steps, target_lr=lr)
     opt.minimize(loss=ae_loss, var_list=cgae.trainable_weights)
@@ -102,7 +104,7 @@ def training_step(ds, step):
 
 for step in range(opt_steps):
     ds = next(dsIter)
-    per_replica_losses = mirrored_strategy.run(training_step, args=(ds, step))
+    per_replica_losses = mirrored_strategy.run(training_step, args=(ds, step, batch_size, shad_size))
     total_loss = mirrored_strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_losses, axis=None)
     print("step:{} loss:{}".format(step,total_loss.numpy()))
     
