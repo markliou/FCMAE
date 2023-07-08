@@ -73,9 +73,9 @@ def training_step(ds, step, batch_size, shad_size):
         reconstructed_img = cgae(masked_ds)
         # reconstructed_img = cgae(ds)
         
-        ae_loss = tf.keras.losses.MeanSquaredError(tf.keras.losses.Reduction.SUM)(reconstructed_img, ds) / batch_size
+        ae_loss = tf.keras.losses.MeanSquaredError(tf.keras.losses.Reduction.SUM)(reconstructed_img, ds) 
         # ae_loss = tf.math.reduce_mean(tf.math.pow((reconstructed_img - ds), 2))
-        total_loss = ae_loss + tf.reduce_sum(cgae.losses) / shad_size
+        total_loss = ae_loss / (batch_size * 128 * 128) + tf.reduce_sum(cgae.losses) / shad_size
         
         return total_loss 
     
@@ -105,7 +105,7 @@ def training_step(ds, step, batch_size, shad_size):
 for step in range(opt_steps):
     ds = next(dsIter)
     per_replica_losses = mirrored_strategy.run(training_step, args=(ds, step, batch_size, shad_size))
-    total_loss = mirrored_strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_losses, axis=None)
+    total_loss = mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
     print("step:{} loss:{}".format(step,total_loss.numpy()))
     
     if step % 100 == 0:
