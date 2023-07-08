@@ -55,7 +55,8 @@ with mirrored_strategy.scope():
     cgae = concept_gated_conv.concept_gated_conv_ae()
     opt = tf.keras.optimizers.AdamW(lr, global_clipnorm=1)
     cgae.load_weights('./models/cgae')
-    
+
+# @tf.function
 def training_step(ds, step, batch_size, shad_size):
     ds = tf.image.resize(ds['image'], (256, 256)) 
     # augmentation
@@ -69,6 +70,7 @@ def training_step(ds, step, batch_size, shad_size):
     ds = (tf.cast(ds, tf.float32) - 128.) / 128.
     masked_ds = concept_gated_conv.masking_img(ds) * ds
     
+    # @tf.function
     def ae_loss():
         reconstructed_img = cgae(masked_ds)
         # reconstructed_img = cgae(ds)

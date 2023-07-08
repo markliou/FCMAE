@@ -88,15 +88,15 @@ def masking_img(imgs, split=(8,8), masking_ratio = 0.9):
     w_size = imgs.shape[2] // split[1]
     
     def gen_mask():
-        mask = np.zeros([imgs.shape[1], imgs.shape[2]])
+        mask = tf.zeros([imgs.shape[1], imgs.shape[2]])
+        mask = tf.Variable(mask)
         patch_index = tf.random.shuffle([i for i in range(totalIndexNo)])[:candidateNo]
         
         for n in patch_index:
             x = (n // split[0]) * h_size
             y = (n % split[1]) * w_size
-            mask[int(x):int(x + h_size), int(y):int(y+ w_size)] = 1
-        np.reshape(mask, [imgs.shape[1], imgs.shape[2], 1])
-        return np.reshape(mask, [imgs.shape[1], imgs.shape[2], 1])
+            mask[int(x):int(x + h_size), int(y):int(y+ w_size)].assign(1) 
+        return tf.reshape(mask, [imgs.shape[1], imgs.shape[2], 1])
     
     masks = tf.map_fn(lambda x: gen_mask(), tf.ones([imgs.shape[0]]), parallel_iterations=30)
     return masks
