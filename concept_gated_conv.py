@@ -50,6 +50,12 @@ def concept_conv(x, channel_no):
 def concept_conv_block(x, channel_no):
     # extract concept
     concept = concept_extract_conv(x, channel_no)
+    
+    # concept transoforming
+    concept = tf.keras.layers.Conv2D(channel_no, (1,1), kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(concept)
+    concept = tf.keras.layers.Conv2D(channel_no, (1,1), kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(concept)
+    concept = tf.keras.layers.Conv2D(channel_no, (1,1), kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(concept)
+    
     # concept injection
     feature = concept_injection_conv(x, concept, channel_no)
     return feature
