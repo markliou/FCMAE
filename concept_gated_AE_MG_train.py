@@ -46,15 +46,15 @@ def lr_warmup_cosine_decay(global_step,
     learning_rate = np.where(global_step < warmup_steps, warmup_lr, learning_rate)
     return learning_rate
 
-batch_size = 64
-shad_size = 2 #gpu number
+batch_size = 32
+shad_size = 1 #gpu number
 opt_steps = 5000000
 lr = 1e-4
 dsIter = iter(bean_img_iter(batch_size))
 with mirrored_strategy.scope():
     cgae = concept_gated_conv.concept_gated_conv_ae()
     opt = tf.keras.optimizers.AdamW(lr, global_clipnorm=1)
-    # cgae.load_weights('./models/cgae')
+    cgae.load_weights('./models/cgae')
 
 # @tf.function
 def training_step(ds, step, batch_size, shad_size):
