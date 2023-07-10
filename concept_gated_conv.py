@@ -25,7 +25,10 @@ def concept_gated_conv_ae():
     conv3 = concept_conv(conv2, 32)
     conv3 = tf.keras.layers.Conv2D(128, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(conv3) # down sampling 32
     
-    latent = tf.keras.layers.Conv2D(256, (1,1), (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(conv3) 
+    latent = tf.keras.layers.Conv2D(256, (11, 11), (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(conv3)
+    latent = tf.keras.layers.Conv2D(64, (11, 11), (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(latent)  
+    latent = tf.keras.layers.Conv2D(64, (11, 11), (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(latent)  
+    latent = tf.keras.layers.Conv2D(256, (11, 11), (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(latent)  
     
     dconv1 = concept_conv(latent, 128)
     dconv1 = tf.keras.layers.Conv2DTranspose(64, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv1) # up sampling 64
@@ -52,7 +55,6 @@ def concept_conv_block(x, channel_no):
     concept = concept_extract_conv(x, channel_no)
     
     # concept transoforming
-    concept = tf.keras.layers.Conv2D(channel_no, (1,1), kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(concept)
     concept = tf.keras.layers.Conv2D(channel_no, (1,1), kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(concept)
     concept = tf.keras.layers.Conv2D(channel_no, (1,1), kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(concept)
     
@@ -89,7 +91,7 @@ def concept_gated_conv(x, concept, kernel_size, channel_no):
     
     # augment the concept
     # concept = tf.keras.layers.Dropout(.2)(tf.zeros_like(enc) + concept)
-    concept = tf.keras.layers.GaussianDropout(.2)(tf.zeros_like(enc) + concept, training=True)
+    # concept = tf.keras.layers.GaussianDropout(.2)(tf.zeros_like(enc) + concept, training=True)
     
     return gate * enc + (1 - gate) * concept
     pass
