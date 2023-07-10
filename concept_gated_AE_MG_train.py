@@ -46,7 +46,7 @@ def lr_warmup_cosine_decay(global_step,
     learning_rate = np.where(global_step < warmup_steps, warmup_lr, learning_rate)
     return learning_rate
 
-batch_size = 32
+batch_size = 20
 shad_size = 1 #gpu number
 opt_steps = 5000000
 lr = 1e-4
@@ -65,10 +65,10 @@ def training_step(ds, step, batch_size, shad_size):
     ds = tf.keras.layers.RandomBrightness(factor=0.2)(ds)
     ds = tf.keras.layers.RandomContrast(.2)(ds)
     # ds = tf.keras.layers.RandomTranslation((.2), (.2))(ds)
-    ds = tf.keras.layers.RandomZoom((.6), (.6))(ds)
+    # ds = tf.keras.layers.RandomZoom((.6), (.6))(ds)
     
     ds = (tf.cast(ds, tf.float32) - 128.) / 128.
-    masked_ds = concept_gated_conv.masking_img(ds) * ds
+    masked_ds = concept_gated_conv.masking_img(ds ,(16, 16), .9) * ds
     
     # @tf.function
     def ae_loss():

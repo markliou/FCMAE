@@ -79,8 +79,18 @@ def concept_injection_conv(x, concept, channel_no):
     pass
 
 def concept_gated_conv(x, concept, kernel_size, channel_no):
-    gate = tf.keras.layers.Conv2D(channel_no, (kernel_size, kernel_size), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=tf.keras.activations.sigmoid)(x)
-    enc = tf.keras.layers.Conv2D(channel_no, (1, 1), kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(x)
+    gate = tf.keras.layers.Conv2D(channel_no, (kernel_size, kernel_size), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(x)
+    gate = tf.keras.layers.Conv2D(channel_no, (kernel_size, kernel_size), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(gate)
+    gate = tf.keras.layers.Conv2D(channel_no, (kernel_size, kernel_size), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=tf.keras.activations.sigmoid)(gate)
+
+    enc = tf.keras.layers.Conv2D(channel_no, (1, 1), kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(x)
+    enc = tf.keras.layers.Conv2D(channel_no, (1, 1), kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(enc)
+    enc = tf.keras.layers.Conv2D(channel_no, (1, 1), kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(enc)
+    
+    # augment the concept
+    # concept = tf.keras.layers.Dropout(.2)(tf.zeros_like(enc) + concept)
+    concept = tf.keras.layers.GaussianDropout(.2)(tf.zeros_like(enc) + concept, training=True)
+    
     return gate * enc + (1 - gate) * concept
     pass
 
