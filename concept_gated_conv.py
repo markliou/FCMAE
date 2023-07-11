@@ -193,11 +193,42 @@ def masking_img(imgs, split=(8,8), masking_ratio = 0.9):
     masks = tf.map_fn(lambda x: gen_mask(), tf.ones([imgs.shape[0]]), parallel_iterations=30)
     return masks
 
-
+def mask_dataset_generator(img_shape, split, masking_ratio):
+    totalIndexNo = split[0] * split[1]
+    candidateNo = int(totalIndexNo * (1 - masking_ratio))
+    h_size = img_shape[0] // split[0]
+    w_size = img_shape[1] // split[1]
+    
+    def gen_mask():
+        mask = tf.zeros(img_shape)
+        mask = tf.Variable(mask)
+        for i in range(500):
+            patch_index = tf.random.shuffle([i for i in range(totalIndexNo)])[:candidateNo]
+            
+            for n in patch_index:
+                x = (n // split[0]) * h_size
+                y = (n % split[1]) * w_size
+                mask[int(x):int(x + h_size), int(y):int(y+ w_size)].assign(1) 
+            yield tf.reshape(mask, [img_shape[0], img_shape[1], 1])
+        
+    ds = tf.data.Dataset.from_generator(gen_mask,
+                                    output_signature = tf.TensorSpec(shape=(256, 256, 1), dtype=tf.int32),
+                                    )
+    
+    return ds
 
 def main():
     model = concept_gated_conv_ae()
     model.summary()
+    
+    img_shape = (256, 256)
+    split = (16, 16)
+    masking_ratio = .9
+    ds = mask_dataset_generator(img_shape, split, masking_ratio)
+    ds = ds.batch(32)
+    ds = ds.prefetch(tf.data.AUTOTUNE)
+    ds = iter(ds)
+    print(ds.__next__().shape)
     
     pass
 
