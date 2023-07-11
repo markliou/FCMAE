@@ -157,8 +157,7 @@ def concept_gated_conv(x, concept, kernel_size, channel_no):
     gate_3 = tf.keras.layers.Conv2D(channel_no, (kernel_size, kernel_size), dilation_rate = dilation_rate, padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(x)
     gate_3 = tf.keras.layers.Conv2D(channel_no, (kernel_size, kernel_size), dilation_rate = dilation_rate, padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(gate_3)
     
-    dilation_rate = (1, 1)
-    gate = tf.keras.layers.Conv2D(channel_no, (1, 1), dilation_rate = dilation_rate, padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=tf.keras.activations.sigmoid)(gate_1 + gate_2 + gate_3)
+    gate = tf.keras.activations.sigmoid(gate_1 + gate_2 + gate_3)
 
     enc = tf.keras.layers.Conv2D(channel_no, (1, 1), dilation_rate = dilation_rate, kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(x)
     enc = tf.keras.layers.Conv2D(channel_no, (1, 1), dilation_rate = dilation_rate, kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(enc)
