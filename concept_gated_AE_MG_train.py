@@ -52,7 +52,8 @@ opt_steps = 5000000
 lr = 1e-4
 dsIter = iter(bean_img_iter(batch_size))
 with mirrored_strategy.scope():
-    cgae = concept_gated_conv.concept_gated_conv_ae()
+    # cgae = concept_gated_conv.concept_gated_conv_ae()
+    cgae = concept_gated_conv.concept_gated_conv_unet_ae()
     opt = tf.keras.optimizers.AdamW(lr, global_clipnorm=1)
     # cgae.load_weights('./models/cgae')
 

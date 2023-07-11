@@ -73,11 +73,11 @@ def concept_gated_conv_unet_ae():
     latent = tf.keras.layers.Conv2D(64, (11, 11), (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(latent)  
     latent = tf.keras.layers.Conv2D(256, (11, 11), (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(latent)  
     
-    dconv1, dconcept1 = concept_conv(latent, 128, True)
+    dconv1 = concept_merged_conv(latent, 32, concept3)
     dconv1 = tf.keras.layers.Conv2DTranspose(64, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv1) # up sampling 64
-    dconv2, dconcept2 = concept_conv(dconv1, 32, True)
+    dconv2 = concept_merged_conv(dconv1, 32, concept2)
     dconv2 = tf.keras.layers.Conv2DTranspose(32, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv2) # up sampling 128
-    dconv3, dconcept3 = concept_conv(dconv2, 32, True)
+    dconv3 = concept_merged_conv(dconv2, 32, concept1)
     dconv3 = tf.keras.layers.Conv2DTranspose(16, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv3) # up sampling 256
     
     out = tf.keras.layers.Conv2D(16, (1,1), activation=tf.nn.tanh)(dconv3)
@@ -95,6 +95,15 @@ def concept_conv(x, channel_no, conceptOutput = False):
         return conv, concept
     else:
         return conv
+    
+def concept_merged_conv(x, channel_no, inputConcept, conceptOutput = False):
+    conv = tf.keras.layers.LayerNormalization(axis=-1)(x)
+    conv, concept = concept_merging_conv_block(conv, channel_no, inputConcept)
+    
+    if(conceptOutput):
+        return conv, concept
+    else:
+        return conv
 
 def concept_conv_block(x, channel_no):
     # extract concept
@@ -108,10 +117,25 @@ def concept_conv_block(x, channel_no):
     feature = concept_injection_conv(x, concept, channel_no)
     return feature, concept
 
+def concept_merging_conv_block(x, channel_no, inputConcept):
+    # extract concept
+    concept = concept_extract_conv(x, channel_no)
+    
+    # merging concept
+    concept += inputConcept
+    
+    # concept transoforming
+    concept = tf.keras.layers.Conv2D(channel_no, (1,1), kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(concept)
+    concept = tf.keras.layers.Conv2D(channel_no, (1,1), kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(concept)
+    
+    # concept injection
+    feature = concept_injection_conv(x, concept, channel_no)
+    return feature, concept
+
 
 def concept_extract_conv(x, channel_no):
     x_shape = x.shape
-    blank = tf.zeros([1, x_shape[1], x_shape[2], channel_no])
+    blank = tf.zeros([1, x_shape[1], x_shape[2], channel_no], dtype=tf.float32)
     concept = concept_gated_conv(x, tf.stop_gradient(blank), 3, channel_no)
     
     return tf.math.reduce_mean(concept, axis=[1, 2], keepdims=True)
