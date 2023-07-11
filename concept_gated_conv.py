@@ -43,12 +43,58 @@ def concept_gated_conv_ae():
     return tf.keras.Model(x, out)
     pass
 
-def concept_conv(x, channel_no):
+def concept_gated_conv_unet_ae():
+    """
+    create a gated convolutional autoencoder.
+    The layers of the U-net is connected with concept.
+    Input: 256x256x3
+    Output: 256x256x3
+    """
+    
+    x = tf.keras.layers.Input(shape=(256, 256, 3))
+    
+    # pixel embedding
+    enc = tf.keras.layers.Conv2D(16, (1,1), activation=mish)(x)
+    
+    # position embedding
+    pos = tf.random.uniform(shape=(256, 256, 16), dtype=tf.float32, minval=-.05, maxval=.05)
+    emb = enc + pos
+    
+    # concept convolution
+    conv1, concept1 = concept_conv(emb, 32, True)
+    conv1 = tf.keras.layers.Conv2D(32, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(conv1) # down sampling 128
+    conv2, concept2 = concept_conv(conv1, 32, True)
+    conv2 = tf.keras.layers.Conv2D(64, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(conv2) # down sampling 64
+    conv3, concept3 = concept_conv(conv2, 32, True)
+    conv3 = tf.keras.layers.Conv2D(128, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(conv3) # down sampling 32
+    
+    latent = tf.keras.layers.Conv2D(256, (11, 11), (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(conv3)
+    latent = tf.keras.layers.Conv2D(64, (11, 11), (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(latent)  
+    latent = tf.keras.layers.Conv2D(64, (11, 11), (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(latent)  
+    latent = tf.keras.layers.Conv2D(256, (11, 11), (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(latent)  
+    
+    dconv1, dconcept1 = concept_conv(latent, 128, True)
+    dconv1 = tf.keras.layers.Conv2DTranspose(64, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv1) # up sampling 64
+    dconv2, dconcept2 = concept_conv(dconv1, 32, True)
+    dconv2 = tf.keras.layers.Conv2DTranspose(32, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv2) # up sampling 128
+    dconv3, dconcept3 = concept_conv(dconv2, 32, True)
+    dconv3 = tf.keras.layers.Conv2DTranspose(16, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv3) # up sampling 256
+    
+    out = tf.keras.layers.Conv2D(16, (1,1), activation=tf.nn.tanh)(dconv3)
+    out = tf.keras.layers.Conv2D(3, (1,1), activation=None)(out)
+    
+    return tf.keras.Model(x, out)
+
+
+def concept_conv(x, channel_no, conceptOutput = False):
     conv = tf.keras.layers.LayerNormalization(axis=-1)(x)
-    conv = concept_conv_block(conv, channel_no)
+    conv, concept = concept_conv_block(conv, channel_no)
     conv = tf.keras.layers.Conv2D(channel_no, (1,1), kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(conv)
     conv = tf.keras.layers.Conv2D(channel_no, (1,1), kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(conv)
-    return conv
+    if(conceptOutput):
+        return conv, concept
+    else:
+        return conv
 
 def concept_conv_block(x, channel_no):
     # extract concept
@@ -60,34 +106,39 @@ def concept_conv_block(x, channel_no):
     
     # concept injection
     feature = concept_injection_conv(x, concept, channel_no)
-    return feature
-    pass
+    return feature, concept
+
 
 def concept_extract_conv(x, channel_no):
     x_shape = x.shape
     blank = tf.zeros([1, x_shape[1], x_shape[2], channel_no])
-    concept11 = concept_gated_conv(x, tf.stop_gradient(blank), 11, channel_no)
-    concept13 = concept_gated_conv(x, tf.stop_gradient(blank), 13, channel_no)
-    concept17 = concept_gated_conv(x, tf.stop_gradient(blank), 17, channel_no)
-    concept = concept11 + concept13 + concept17
+    concept = concept_gated_conv(x, tf.stop_gradient(blank), 3, channel_no)
+    
     return tf.math.reduce_mean(concept, axis=[1, 2], keepdims=True)
-    pass
 
 def concept_injection_conv(x, concept, channel_no):
-    feature11 = concept_gated_conv(x, concept, 11, channel_no)
-    feature13 = concept_gated_conv(x, concept, 13, channel_no)
-    feature17 = concept_gated_conv(x, concept, 17, channel_no)
-    return feature11 + feature13 + feature17
-    pass
+    feature = concept_gated_conv(x, concept, 3, channel_no)
+    return feature
 
 def concept_gated_conv(x, concept, kernel_size, channel_no):
-    gate = tf.keras.layers.Conv2D(channel_no, (kernel_size, kernel_size), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(x)
-    gate = tf.keras.layers.Conv2D(channel_no, (kernel_size, kernel_size), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(gate)
-    gate = tf.keras.layers.Conv2D(channel_no, (kernel_size, kernel_size), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=tf.keras.activations.sigmoid)(gate)
+    dilation_rate = (1, 1)
+    gate_1 = tf.keras.layers.Conv2D(channel_no, (kernel_size, kernel_size), dilation_rate = dilation_rate, padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(x)
+    gate_1 = tf.keras.layers.Conv2D(channel_no, (kernel_size, kernel_size), dilation_rate = dilation_rate, padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(gate_1)
+    
+    dilation_rate = (2, 2)
+    gate_2 = tf.keras.layers.Conv2D(channel_no, (kernel_size, kernel_size), dilation_rate = dilation_rate, padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(x)
+    gate_2 = tf.keras.layers.Conv2D(channel_no, (kernel_size, kernel_size), dilation_rate = dilation_rate, padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(gate_2)
+    
+    dilation_rate = (3, 3)
+    gate_3 = tf.keras.layers.Conv2D(channel_no, (kernel_size, kernel_size), dilation_rate = dilation_rate, padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(x)
+    gate_3 = tf.keras.layers.Conv2D(channel_no, (kernel_size, kernel_size), dilation_rate = dilation_rate, padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(gate_3)
+    
+    dilation_rate = (1, 1)
+    gate = tf.keras.layers.Conv2D(channel_no, (1, 1), dilation_rate = dilation_rate, padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=tf.keras.activations.sigmoid)(gate_1 + gate_2 + gate_3)
 
-    enc = tf.keras.layers.Conv2D(channel_no, (1, 1), kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(x)
-    enc = tf.keras.layers.Conv2D(channel_no, (1, 1), kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(enc)
-    enc = tf.keras.layers.Conv2D(channel_no, (1, 1), kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(enc)
+    enc = tf.keras.layers.Conv2D(channel_no, (1, 1), dilation_rate = dilation_rate, kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(x)
+    enc = tf.keras.layers.Conv2D(channel_no, (1, 1), dilation_rate = dilation_rate, kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(enc)
+    enc = tf.keras.layers.Conv2D(channel_no, (1, 1), dilation_rate = dilation_rate, kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(enc)
     
     # augment the concept
     # concept = tf.keras.layers.Dropout(.2)(tf.zeros_like(enc) + concept)
