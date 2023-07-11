@@ -190,7 +190,7 @@ def masking_img(imgs, split=(8,8), masking_ratio = 0.9):
             mask[int(x):int(x + h_size), int(y):int(y+ w_size)].assign(1) 
         return tf.reshape(mask, [imgs.shape[1], imgs.shape[2], 1])
     
-    masks = tf.map_fn(lambda x: gen_mask(), tf.ones([imgs.shape[0]]), parallel_iterations=30)
+    masks = tf.map_fn(lambda x: gen_mask(), tf.ones([imgs.shape[0]]), parallel_iterations=8)
     return masks
 
 def mask_dataset_generator(img_shape, split, masking_ratio):
@@ -202,7 +202,7 @@ def mask_dataset_generator(img_shape, split, masking_ratio):
     def gen_mask():
         mask = tf.zeros(img_shape)
         mask = tf.Variable(mask)
-        for i in range(500):
+        for i in range(10):
             patch_index = tf.random.shuffle([i for i in range(totalIndexNo)])[:candidateNo]
             
             for n in patch_index:
@@ -225,10 +225,13 @@ def main():
     split = (16, 16)
     masking_ratio = .9
     ds = mask_dataset_generator(img_shape, split, masking_ratio)
-    ds = ds.batch(32)
+    ds = ds.batch(32, drop_remainder=True, num_parallel_calls=tf.data.AUTOTUNE)
+    ds = ds.repeat()
     ds = ds.prefetch(tf.data.AUTOTUNE)
     ds = iter(ds)
-    print(ds.__next__().shape)
+    
+    for i in range(100):
+        print(ds.__next__().shape)
     
     pass
 
