@@ -66,18 +66,18 @@ def concept_conv_block(x, channel_no):
 def concept_extract_conv(x, channel_no):
     x_shape = x.shape
     blank = tf.zeros([1, x_shape[1], x_shape[2], channel_no])
-    concept3 = concept_gated_conv(x, tf.stop_gradient(blank), 3, channel_no)
-    concept5 = concept_gated_conv(x, tf.stop_gradient(blank), 5, channel_no)
-    concept7 = concept_gated_conv(x, tf.stop_gradient(blank), 7, channel_no)
-    concept = concept3 + concept5 + concept7
+    concept11 = concept_gated_conv(x, tf.stop_gradient(blank), 11, channel_no)
+    concept13 = concept_gated_conv(x, tf.stop_gradient(blank), 13, channel_no)
+    concept17 = concept_gated_conv(x, tf.stop_gradient(blank), 17, channel_no)
+    concept = concept11 + concept13 + concept17
     return tf.math.reduce_mean(concept, axis=[1, 2], keepdims=True)
     pass
 
 def concept_injection_conv(x, concept, channel_no):
-    feature3 = concept_gated_conv(x, concept, 3, channel_no)
-    feature5 = concept_gated_conv(x, concept, 5, channel_no)
-    feature7 = concept_gated_conv(x, concept, 7, channel_no)
-    return feature3 + feature5 + feature7
+    feature11 = concept_gated_conv(x, concept, 11, channel_no)
+    feature13 = concept_gated_conv(x, concept, 13, channel_no)
+    feature17 = concept_gated_conv(x, concept, 17, channel_no)
+    return feature11 + feature13 + feature17
     pass
 
 def concept_gated_conv(x, concept, kernel_size, channel_no):
