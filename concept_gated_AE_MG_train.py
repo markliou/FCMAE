@@ -57,34 +57,34 @@ def lr_warmup_cosine_decay(global_step,
     learning_rate = np.where(global_step < warmup_steps, warmup_lr, learning_rate)
     return learning_rate
 
-batch_size = 2
+batch_size = 200
 shad_size = 2 #gpu number
 opt_steps = 5000000
 lr = 1e-4
 dsIter = iter(bean_img_iter(batch_size))
-maskIter = iter(mask_iter(batch_size)) ###
+# maskIter = iter(mask_iter(batch_size)) ###
 
 with mirrored_strategy.scope():
     # cgae = concept_gated_conv.concept_gated_conv_ae()
     cgae = concept_gated_conv.concept_gated_conv_unet_ae()
     opt = tf.keras.optimizers.AdamW(lr, global_clipnorm=1)
-    # cgae.load_weights('./models/cgae')
+    cgae.load_weights('./models/cgae')
 
 # @tf.function
-# def training_step(ds, step, batch_size, shad_size):
-def training_step(ds, mask, step, batch_size, shad_size):
+def training_step(ds, step, batch_size, shad_size):
+# def training_step(ds, mask, step, batch_size, shad_size):
     ds = tf.image.resize(ds['image'], (128, 128)) 
     # augmentation
-    # ds = tf.keras.layers.RandomFlip("horizontal_and_vertical")(ds)
-    # ds = tf.keras.layers.RandomRotation(0.05, fill_mode='nearest')(ds)
-    # ds = tf.keras.layers.RandomBrightness(factor=0.2)(ds)
-    # ds = tf.keras.layers.RandomContrast(.2)(ds)
-    # ds = tf.keras.layers.RandomTranslation((.05), (.05), fill_mode='nearest')(ds)
-    # ds = tf.keras.layers.RandomZoom((.05), (.05), fill_mode='nearest')(ds)
+    ds = tf.keras.layers.RandomFlip("horizontal_and_vertical")(ds)
+    ds = tf.keras.layers.RandomRotation(0.05, fill_mode='nearest')(ds)
+    ds = tf.keras.layers.RandomBrightness(factor=0.2)(ds)
+    ds = tf.keras.layers.RandomContrast(.2)(ds)
+    ds = tf.keras.layers.RandomTranslation((.05), (.05), fill_mode='nearest')(ds)
+    ds = tf.keras.layers.RandomZoom((.05), (.05), fill_mode='nearest')(ds)
     
     ds = (tf.cast(ds, tf.float32) - 128.) / 128.
-    # masked_ds = concept_gated_conv.masking_img(ds ,(16, 16), .9) * ds
-    masked_ds = mask * ds
+    masked_ds = concept_gated_conv.masking_img(ds ,(16, 16), .9) * ds
+    # masked_ds = mask * ds
     
     # @tf.function
     def ae_loss():
@@ -122,11 +122,11 @@ def training_step(ds, mask, step, batch_size, shad_size):
 
 for step in range(opt_steps):
     ds = next(dsIter)
-    mask = next(maskIter)
+    # mask = next(maskIter)
     
     
-    per_replica_losses = mirrored_strategy.run(training_step, args=(ds, mask, step, batch_size, shad_size))
-    # per_replica_losses = mirrored_strategy.run(training_step, args=(ds, step, batch_size, shad_size))
+    # per_replica_losses = mirrored_strategy.run(training_step, args=(ds, mask, step, batch_size, shad_size))
+    per_replica_losses = mirrored_strategy.run(training_step, args=(ds, step, batch_size, shad_size))
     total_loss = mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
     print("step:{} loss:{}".format(step,total_loss.numpy()))
     
