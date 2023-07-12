@@ -204,7 +204,7 @@ def mask_dataset_generator(img_shape, split, masking_ratio):
 
     ds = tf.data.Dataset.from_generator(gen_mask,
                                     args = (img_shape, split, masking_ratio, totalIndexNo, candidateNo, h_size, w_size),
-                                    output_signature = tf.TensorSpec(shape=(256, 256, 1), dtype=tf.float32),
+                                    output_signature = tf.TensorSpec(shape=(128, 128, 1), dtype=tf.float32),
                                     )
     
     return ds
