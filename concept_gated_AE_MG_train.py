@@ -68,7 +68,7 @@ with mirrored_strategy.scope():
     # cgae = concept_gated_conv.concept_gated_conv_ae()
     cgae = concept_gated_conv.concept_gated_conv_unet_ae()
     opt = tf.keras.optimizers.AdamW(lr, global_clipnorm=1)
-    # cgae.load_weights('./models/cgae')
+    cgae.load_weights('./models/cgae')
 
 # @tf.function
 def training_step(ds, step, batch_size, shad_size):
@@ -76,11 +76,11 @@ def training_step(ds, step, batch_size, shad_size):
     ds = tf.image.resize(ds['image'], (128, 128)) 
     # augmentation
     ds = tf.keras.layers.RandomFlip("horizontal_and_vertical")(ds)
-    ds = tf.keras.layers.RandomRotation(0.1, fill_mode='nearest')(ds)
+    ds = tf.keras.layers.RandomRotation(0.05, fill_mode='nearest')(ds)
     ds = tf.keras.layers.RandomBrightness(factor=0.2)(ds)
     ds = tf.keras.layers.RandomContrast(.2)(ds)
     ds = tf.keras.layers.RandomTranslation((.05), (.05), fill_mode='nearest')(ds)
-    ds = tf.keras.layers.RandomZoom((.1), (.1), fill_mode='nearest')(ds)
+    ds = tf.keras.layers.RandomZoom((.05), (.05), fill_mode='nearest')(ds)
     
     ds = (tf.cast(ds, tf.float32) - 128.) / 128.
     masked_ds = concept_gated_conv.masking_img(ds ,(16, 16), .9) * ds
