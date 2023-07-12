@@ -202,7 +202,8 @@ def mask_dataset_generator(img_shape, split, masking_ratio):
     def gen_mask():
         mask = tf.zeros(img_shape)
         mask = tf.Variable(mask)
-        for i in range(10):
+        # for i in range(10):
+        while(1):
             patch_index = tf.random.shuffle([i for i in range(totalIndexNo)])[:candidateNo]
             
             for n in patch_index:
@@ -212,7 +213,7 @@ def mask_dataset_generator(img_shape, split, masking_ratio):
             yield tf.reshape(mask, [img_shape[0], img_shape[1], 1])
         
     ds = tf.data.Dataset.from_generator(gen_mask,
-                                    output_signature = tf.TensorSpec(shape=(256, 256, 1), dtype=tf.int32),
+                                    output_signature = tf.TensorSpec(shape=(256, 256, 1), dtype=tf.float32),
                                     )
     
     return ds
