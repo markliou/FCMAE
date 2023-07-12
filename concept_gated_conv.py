@@ -51,37 +51,40 @@ def concept_gated_conv_unet_ae():
     Output: 256x256x3
     """
     
-    x = tf.keras.layers.Input(shape=(256, 256, 3))
+    x = tf.keras.layers.Input(shape=(128, 128, 3))
     
     # pixel embedding
     enc = tf.keras.layers.Conv2D(16, (1,1), activation=mish)(x)
     
     # position embedding
-    pos = tf.random.uniform(shape=(256, 256, 16), dtype=tf.float32, minval=-.05, maxval=.05)
+    pos = tf.random.uniform(shape=(128, 128, 16), dtype=tf.float32, minval=-.05, maxval=.05)
     emb = enc + pos
     
     # concept convolution
-    conv1, concept1 = concept_conv(emb, 32, True)
-    conv1 = tf.keras.layers.Conv2D(32, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(conv1) # down sampling 128
-    conv2, concept2 = concept_conv(conv1, 32, True)
-    conv2 = tf.keras.layers.Conv2D(64, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(conv2) # down sampling 64
-    conv3, concept3 = concept_conv(conv2, 32, True)
-    conv3 = tf.keras.layers.Conv2D(128, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(conv3) # down sampling 32
+    conv1c, concept1 = concept_conv(emb, 32, True)
+    conv1 = tf.keras.layers.Conv2D(32, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(conv1c) # down sampling 128
+    conv2c, concept2 = concept_conv(conv1, 32, True)
+    conv2 = tf.keras.layers.Conv2D(64, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(conv2c) # down sampling 64
+    conv3c, concept3 = concept_conv(conv2, 32, True)
+    conv3 = tf.keras.layers.Conv2D(128, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(conv3c) # down sampling 32
     
     latent = tf.keras.layers.Conv2D(256, (11, 11), (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(conv3)
-    latent = tf.keras.layers.Conv2D(64, (11, 11), (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(latent)  
     latent = tf.keras.layers.Conv2D(64, (11, 11), (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(latent)  
     latent = tf.keras.layers.Conv2D(256, (11, 11), (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(latent)  
     
     dconv1 = concept_merged_conv(latent, 32, concept3)
-    dconv1 = tf.keras.layers.Conv2DTranspose(64, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv1) # up sampling 64
-    dconv2 = concept_merged_conv(dconv1, 32, concept2)
-    dconv2 = tf.keras.layers.Conv2DTranspose(32, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv2) # up sampling 128
-    dconv3 = concept_merged_conv(dconv2, 32, concept1)
-    dconv3 = tf.keras.layers.Conv2DTranspose(16, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv3) # up sampling 256
+    dconv1 = tf.keras.layers.Conv2DTranspose(128, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv1) # up sampling 64
+    dconv2 = concept_merged_conv(dconv1, 32, concept2) + conv3c
+    dconv2 = tf.keras.layers.Conv2DTranspose(64, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv2) # up sampling 128
+    dconv3 = concept_merged_conv(dconv2, 32, concept1) + conv2c
+    dconv3 = tf.keras.layers.Conv2DTranspose(32, (3,3), (2,2), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv3) # up sampling 256
+    dconv3 += conv1c
     
-    out = tf.keras.layers.Conv2D(16, (1,1), activation=tf.nn.tanh)(dconv3)
-    out = tf.keras.layers.Conv2D(3, (1,1), activation=None)(out)
+    # decoding
+    out = tf.keras.layers.Conv2D(16, (3,3), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv3)
+    out = tf.keras.layers.Conv2D(16, (3,3), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(out)
+    out = tf.keras.layers.Conv2D(16, (3,3), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(out)
+    out = tf.keras.layers.Conv2D(3, (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(out)
     
     return tf.keras.Model(x, out)
 
