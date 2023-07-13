@@ -29,7 +29,7 @@ def mask_iter(bs = 32, img_shape = (128, 128), split = (16, 16), masking_ratio =
     ds = ds.batch(bs, drop_remainder=False, num_parallel_calls=tf.data.AUTOTUNE)
     # ds = ds.repeat(1)
     # ds = ds.prefetch(tf.data.AUTOTUNE)
-    ds = ds.prefetch(3)
+    ds = ds.prefetch(128)
     
     ds = mirrored_strategy.experimental_distribute_dataset(ds)
     
@@ -62,6 +62,8 @@ batch_size = 200
 shad_size = 2 #gpu number
 opt_steps = 5000000
 lr = 1e-4
+# lr_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0., decay_steps=opt_steps, alpha=1e-6, warmup_target=1e-4, warmup_steps=100)
+lr_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0., decay_steps=opt_steps, alpha=1e-6)
 dsIter = iter(bean_img_iter(batch_size))
 # maskIter = iter(mask_iter(batch_size)) ###
 
@@ -69,6 +71,7 @@ with mirrored_strategy.scope():
     # cgae = concept_gated_conv.concept_gated_conv_ae()
     cgae = concept_gated_conv.concept_gated_conv_unet_ae()
     opt = tf.keras.optimizers.AdamW(lr, global_clipnorm=1)
+    # opt = tf.keras.optimizers.AdamW(lr_fn, global_clipnorm=1)
     cgae.load_weights('./models/cgae')
 
 # @tf.function
