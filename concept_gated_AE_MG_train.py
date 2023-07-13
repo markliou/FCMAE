@@ -28,7 +28,8 @@ def mask_iter(bs = 32, img_shape = (128, 128), split = (16, 16), masking_ratio =
     ds = concept_gated_conv.mask_dataset_generator(img_shape, split, masking_ratio)
     ds = ds.batch(bs, drop_remainder=False, num_parallel_calls=tf.data.AUTOTUNE)
     # ds = ds.repeat(1)
-    ds = ds.prefetch(tf.data.AUTOTUNE)
+    # ds = ds.prefetch(tf.data.AUTOTUNE)
+    ds = ds.prefetch(3)
     
     ds = mirrored_strategy.experimental_distribute_dataset(ds)
     
@@ -76,14 +77,14 @@ def training_step(ds, step, batch_size, shad_size):
     ds = tf.image.resize(ds['image'], (128, 128)) 
     # augmentation
     ds = tf.keras.layers.RandomFlip("horizontal_and_vertical")(ds)
-    ds = tf.keras.layers.RandomRotation(0.05, fill_mode='nearest')(ds)
+    # ds = tf.keras.layers.RandomRotation(0.05, fill_mode='nearest')(ds) # no rotating from MAE
     ds = tf.keras.layers.RandomBrightness(factor=0.2)(ds)
     ds = tf.keras.layers.RandomContrast(.2)(ds)
     ds = tf.keras.layers.RandomTranslation((.05), (.05), fill_mode='nearest')(ds)
-    ds = tf.keras.layers.RandomZoom((.05), (.05), fill_mode='nearest')(ds)
+    ds = tf.keras.layers.RandomZoom((0, -.2), (0, -.2), fill_mode='nearest')(ds) # only zoom-in from MAE
     
     ds = (tf.cast(ds, tf.float32) - 128.) / 128.
-    masked_ds = concept_gated_conv.masking_img(ds ,(16, 16), .9) * ds
+    masked_ds = concept_gated_conv.masking_img(ds ,(16, 16), .75) * ds # mased ratio of 75% from MAE
     # masked_ds = mask * ds
     
     # @tf.function
