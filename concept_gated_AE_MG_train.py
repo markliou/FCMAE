@@ -26,8 +26,8 @@ def bean_img_iter(bs = 32):
 # mask into dataset
 def mask_iter(bs = 32, img_shape = (128, 128), split = (16, 16), masking_ratio = .75):
     # ds = concept_gated_conv.mask_dataset_generator(img_shape, split, masking_ratio)
-    ds = concept_gated_conv.mask_tensor_dataset(img_shape, split, masking_ratio)
-    ds = ds.batch(bs, drop_remainder=False, num_parallel_calls=tf.data.AUTOTUNE)
+    ds = concept_gated_conv.mask_tensor_dataset(img_shape, split, masking_ratio, 10000)
+    ds = ds.batch(bs, drop_remainder=True, num_parallel_calls=tf.data.AUTOTUNE)
     ds = ds.repeat()
     ds = ds.prefetch(tf.data.AUTOTUNE)
     
@@ -58,7 +58,7 @@ def lr_warmup_cosine_decay(global_step,
     learning_rate = np.where(global_step < warmup_steps, warmup_lr, learning_rate)
     return learning_rate
 
-batch_size = 2
+batch_size = 200
 shad_size = 2 #gpu number
 opt_steps = 5000000
 lr = 1e-4
@@ -72,7 +72,7 @@ with mirrored_strategy.scope():
     cgae = concept_gated_conv.concept_gated_conv_unet_ae()
     opt = tf.keras.optimizers.AdamW(lr, global_clipnorm=1)
     # opt = tf.keras.optimizers.AdamW(lr_fn, global_clipnorm=1)
-    # cgae.load_weights('./models/cgae')
+    cgae.load_weights('./models/cgae')
 
 # @tf.function
 # def training_step(ds, step, batch_size, shad_size):
@@ -104,23 +104,23 @@ def training_step(ds, mask, step, batch_size, shad_size):
     opt.lr = lr_warmup_cosine_decay(step, 100, opt_steps, target_lr=lr)
     opt.minimize(loss=ae_loss, var_list=cgae.trainable_weights)
     
-    # if step % 100 == 0:
-    #     reconstructed_img = cgae(masked_ds)
-    #     img_array = reconstructed_img[0].numpy()
-    #     dsimg_array = ds[0].numpy()
-    #     masked_ds_array = masked_ds[0].numpy()
+    if step % 100 == 0:
+        reconstructed_img = cgae(masked_ds)
+        img_array = reconstructed_img[0].numpy()
+        dsimg_array = ds[0].numpy()
+        masked_ds_array = masked_ds[0].numpy()
         
-    #     img_array = tf.cast((img_array + 1 ) * 128, tf.uint8)
-    #     dsimg_array = tf.cast((dsimg_array + 1 ) * 128, tf.uint8)
-    #     masked_ds_array = tf.cast((masked_ds_array + 1 ) * 128, tf.uint8)
+        img_array = tf.cast((img_array + 1 ) * 128, tf.uint8)
+        dsimg_array = tf.cast((dsimg_array + 1 ) * 128, tf.uint8)
+        masked_ds_array = tf.cast((masked_ds_array + 1 ) * 128, tf.uint8)
         
-    #     img = PIL.Image.fromarray(img_array.numpy(), None)
-    #     dsimg = PIL.Image.fromarray(dsimg_array.numpy(), None)
-    #     masked_ds_img = PIL.Image.fromarray(masked_ds_array.numpy(), None)
+        img = PIL.Image.fromarray(img_array.numpy(), None)
+        dsimg = PIL.Image.fromarray(dsimg_array.numpy(), None)
+        masked_ds_img = PIL.Image.fromarray(masked_ds_array.numpy(), None)
         
-    #     img.save('current.jpg')
-    #     dsimg.save('dscurrent.jpg')
-    #     masked_ds_img.save('ds_mased_current.jpg')
+        img.save('current.jpg')
+        dsimg.save('dscurrent.jpg')
+        masked_ds_img.save('ds_mased_current.jpg')
     
     return ae_loss()
 

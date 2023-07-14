@@ -222,7 +222,7 @@ def gen_mask(img_shape, split, masking_ratio, totalIndexNo, candidateNo, h_size,
             mask[int(x):int(x + h_size), int(y):int(y+ w_size)].assign(1) 
         yield tf.reshape(mask, [img_shape[0], img_shape[1], 1])
     
-def mask_tensor_dataset(img_shape, split=(8,8), masking_ratio = 0.9, dataset_n = 8000):
+def mask_tensor_dataset(img_shape, split=(8,8), masking_ratio = 0.9, dataset_n = 1000):
     totalIndexNo = split[0] * split[1]
     candidateNo = int(totalIndexNo * (1 - masking_ratio))
     h_size = img_shape[0] // split[0]
