@@ -229,9 +229,13 @@ def mask_tensor_dataset(img_shape, split=(8,8), masking_ratio = 0.9, dataset_n =
     w_size = img_shape[1] // split[1]
     
     def gen_mask():
-        mask = tf.zeros([img_shape[0], img_shape[1]])
-        mask = tf.Variable(mask)
+        mask = tf.zeros([img_shape[0], img_shape[1]], dtype=tf.float32)
+        mask = tf.Variable(mask, dtype=tf.float32)
         patch_index = tf.random.shuffle([i for i in range(totalIndexNo)])[:candidateNo]
+        
+        # tf.map_fn(lambda n: mask[int((n // split[0]) * h_size):int(((n // split[0]) * h_size) + h_size), int((n % split[1]) * w_size):int(((n % split[1]) * w_size)+ w_size)].assign(1.), 
+        #           patch_index, 
+        #           parallel_iterations=8)
         
         for n in patch_index:
             x = (n // split[0]) * h_size

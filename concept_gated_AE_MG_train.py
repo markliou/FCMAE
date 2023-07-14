@@ -28,6 +28,7 @@ def mask_iter(bs = 32, img_shape = (128, 128), split = (16, 16), masking_ratio =
     # ds = concept_gated_conv.mask_dataset_generator(img_shape, split, masking_ratio)
     ds = concept_gated_conv.mask_tensor_dataset(img_shape, split, masking_ratio, 10000)
     ds = ds.batch(bs, drop_remainder=True, num_parallel_calls=tf.data.AUTOTUNE)
+    ds = ds.shuffle(256, reshuffle_each_iteration=True)
     ds = ds.repeat()
     ds = ds.prefetch(tf.data.AUTOTUNE)
     
@@ -62,8 +63,8 @@ batch_size = 200
 shad_size = 2 #gpu number
 opt_steps = 5000000
 lr = 1e-4
-# lr_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0., decay_steps=opt_steps, alpha=1e-6, warmup_target=1e-4, warmup_steps=100)
-lr_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0., decay_steps=opt_steps, alpha=1e-6)
+# lr_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0., decay_steps=opt_steps, alpha=1e-6, warmup_target=lr, warmup_steps=100) #tf 2.13
+# lr_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0., decay_steps=opt_steps, alpha=1e-6) #tf 2.12
 dsIter = iter(bean_img_iter(batch_size))
 maskIter = iter(mask_iter(batch_size)) ###
 
@@ -85,6 +86,11 @@ def training_step(ds, mask, step, batch_size, shad_size):
     ds = tf.keras.layers.RandomContrast(.2)(ds)
     ds = tf.keras.layers.RandomTranslation((.05), (.05), fill_mode='nearest')(ds)
     ds = tf.keras.layers.RandomZoom((0, -.2), (0, -.2), fill_mode='nearest')(ds) # only zoom-in from MAE
+    ds = tf.image.rot90(ds, k=step%4)
+    
+    mask = tf.keras.layers.RandomFlip("horizontal_and_vertical")(mask)
+    # mask = tf.keras.layers.RandomRotation(0.05, fill_mode='constant')(mask)
+    mask = tf.image.rot90(mask, k=step%4)
     
     ds = (tf.cast(ds, tf.float32) - 128.) / 128.
     # masked_ds = concept_gated_conv.masking_img(ds ,(16, 16), .75) * ds # mased ratio of 75% from MAE
@@ -131,9 +137,12 @@ for step in range(opt_steps):
     
     per_replica_losses = mirrored_strategy.run(training_step, args=(ds, mask, step, batch_size, shad_size))
     # per_replica_losses = mirrored_strategy.run(training_step, args=(ds, step, batch_size, shad_size))
-    total_loss = mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
-    print("step:{} loss:{}".format(step,total_loss.numpy()))
+    
+    # total_loss = mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
+    # print("step:{} loss:{}".format(step,total_loss.numpy()))
     
     if step % 100 == 0:
+        total_loss = mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
+        print("step:{} loss:{}".format(step,total_loss.numpy()))
         cgae.save_weights('./models/cgae')
 
