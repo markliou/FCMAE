@@ -222,6 +222,27 @@ def gen_mask(img_shape, split, masking_ratio, totalIndexNo, candidateNo, h_size,
             mask[int(x):int(x + h_size), int(y):int(y+ w_size)].assign(1) 
         yield tf.reshape(mask, [img_shape[0], img_shape[1], 1])
     
+def mask_tensor_dataset(img_shape, split=(8,8), masking_ratio = 0.9, dataset_n = 8000):
+    totalIndexNo = split[0] * split[1]
+    candidateNo = int(totalIndexNo * (1 - masking_ratio))
+    h_size = img_shape[0] // split[0]
+    w_size = img_shape[1] // split[1]
+    
+    def gen_mask():
+        mask = tf.zeros([img_shape[0], img_shape[1]])
+        mask = tf.Variable(mask)
+        patch_index = tf.random.shuffle([i for i in range(totalIndexNo)])[:candidateNo]
+        
+        for n in patch_index:
+            x = (n // split[0]) * h_size
+            y = (n % split[1]) * w_size
+            mask[int(x):int(x + h_size), int(y):int(y+ w_size)].assign(1) 
+        return tf.reshape(mask, [img_shape[0], img_shape[1], 1])
+    
+    masks = tf.map_fn(lambda x: gen_mask(), tf.ones([dataset_n]), parallel_iterations=8)
+    masks_ds = tf.data.Dataset.from_tensor_slices(masks)
+    return masks_ds
+
 def main():
     model = concept_gated_conv_ae()
     model.summary()
