@@ -81,9 +81,13 @@ def concept_gated_conv_unet_ae():
     dconv3 += conv1c
     
     # decoding
-    out = tf.keras.layers.Conv2D(16, (3,3), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(dconv3)
-    out = tf.keras.layers.Conv2D(16, (3,3), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(out)
-    out = tf.keras.layers.Conv2D(16, (3,3), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(out)
+    out = tf.keras.layers.LayerNormalization(axis=(-2, -3))(dconv3)
+    out = tf.keras.layers.Conv2D(64, (11,11), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(out)
+    out = tf.keras.layers.LayerNormalization(axis=(-2, -3))(out)
+    out = tf.keras.layers.Conv2D(32, (11,11), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(out)
+    out = tf.keras.layers.LayerNormalization(axis=(-2, -3))(out)
+    out = tf.keras.layers.Conv2D(16, (11,11), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(out)
+    out = tf.keras.layers.LayerNormalization(axis=(-2, -3))(out)
     out = tf.keras.layers.Conv2D(3, (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(out)
     
     return tf.keras.Model(x, out)
