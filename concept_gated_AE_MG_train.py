@@ -14,7 +14,8 @@ def bean_img_iter(bs = 32):
     img_size = (500, 500)
     
     dataset = tfds.load("beans", split='train', shuffle_files=True)
-    dataset = dataset.batch(bs, drop_remainder=True, num_parallel_calls=tf.data.AUTOTUNE)
+    # dataset = dataset.batch(bs, drop_remainder=True, num_parallel_calls=tf.data.AUTOTUNE)
+    dataset = dataset.batch(bs, drop_remainder=True, num_parallel_calls=10)
     dataset = dataset.repeat()
     dataset = dataset.shuffle(256, reshuffle_each_iteration=True)
     dataset = dataset.prefetch(tf.data.AUTOTUNE)
@@ -27,7 +28,8 @@ def bean_img_iter(bs = 32):
 def mask_iter(bs = 32, img_shape = (128, 128), split = (16, 16), masking_ratio = .75):
     # ds = concept_gated_conv.mask_dataset_generator(img_shape, split, masking_ratio)
     ds = concept_gated_conv.mask_tensor_dataset(img_shape, split, masking_ratio, 10000)
-    ds = ds.batch(bs, drop_remainder=True, num_parallel_calls=tf.data.AUTOTUNE)
+    # ds = ds.batch(bs, drop_remainder=True, num_parallel_calls=tf.data.AUTOTUNE)
+    ds = ds.batch(bs, drop_remainder=True, num_parallel_calls=10)
     ds = ds.shuffle(256, reshuffle_each_iteration=True)
     ds = ds.repeat()
     ds = ds.prefetch(tf.data.AUTOTUNE)
