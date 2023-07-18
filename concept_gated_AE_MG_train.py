@@ -104,7 +104,10 @@ def training_step(ds, mask, step, batch_size, shad_size):
         # reconstructed_img = cgae(ds)
         
         ae_loss = tf.keras.losses.MeanSquaredError(tf.keras.losses.Reduction.SUM)(reconstructed_img, ds) 
+        ae_loss += tf.keras.losses.MeanAbsoluteError(tf.keras.losses.Reduction.SUM)(reconstructed_img, ds) 
+        
         # ae_loss = tf.math.reduce_mean(tf.math.pow((reconstructed_img - ds), 2))
+        
         total_loss = ae_loss / (batch_size * 128 * 128) + tf.reduce_sum(cgae.losses) / shad_size
         
         return total_loss 

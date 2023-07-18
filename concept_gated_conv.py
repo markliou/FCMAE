@@ -11,10 +11,10 @@ def concept_gated_conv_ae():
     x = tf.keras.layers.Input(shape=(256, 256, 3))
     
     # pixel embedding
-    enc = tf.keras.layers.Conv2D(16, (1,1), activation=mish)(x)
+    enc = tf.keras.layers.Conv2D(16, (1,1), activation=None)(x)
     
     # position embedding
-    pos = tf.random.uniform(shape=(256, 256, 16), dtype=tf.float32, minval=-.05, maxval=.05)
+    pos = tf.random.uniform(shape=(256, 256, 1), dtype=tf.float32, minval=-.05, maxval=.05)
     emb = enc + pos
     
     # concept convolution
@@ -54,10 +54,10 @@ def concept_gated_conv_unet_ae():
     x = tf.keras.layers.Input(shape=(128, 128, 3))
     
     # pixel embedding
-    enc = tf.keras.layers.Conv2D(16, (1,1), activation=mish)(x)
+    enc = tf.keras.layers.Conv2D(16, (1,1), activation=None)(x)
     
     # position embedding
-    pos = tf.random.uniform(shape=(128, 128, 16), dtype=tf.float32, minval=-.05, maxval=.05)
+    pos = tf.random.uniform(shape=(128, 128, 1), dtype=tf.float32, minval=-.05, maxval=.05)
     emb = enc + pos
     
     # concept convolution
