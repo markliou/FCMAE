@@ -75,7 +75,7 @@ with mirrored_strategy.scope():
     cgae = concept_gated_conv.concept_gated_conv_unet_ae()
     opt = tf.keras.optimizers.AdamW(lr, global_clipnorm=1)
     # opt = tf.keras.optimizers.AdamW(lr_fn, global_clipnorm=1)
-    cgae.load_weights('./models/cgae')
+    # cgae.load_weights('./models/cgae')
 
 # @tf.function
 # def training_step(ds, step, batch_size, shad_size):
