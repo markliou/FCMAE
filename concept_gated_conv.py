@@ -88,7 +88,14 @@ def concept_gated_conv_unet_ae():
     out = tf.keras.layers.LayerNormalization(axis=(-1, -2, -3))(out)
     out = tf.keras.layers.Conv2D(16, (3,3), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(out)
     out = tf.keras.layers.LayerNormalization(axis=(-1, -2, -3))(out)
-    out = tf.keras.layers.Conv2D(3, (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(out)
+    # out = tf.keras.layers.Conv2D(3, (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(out)
+    
+    # for cross-entropy loss
+    out_r = tf.keras.layers.Conv2D(256, (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(out)
+    out_g = tf.keras.layers.Conv2D(256, (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(out)
+    out_b = tf.keras.layers.Conv2D(256, (1,1), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=None)(out)
+    
+    out = tf.stack([out_r, out_g, out_b], axis=-2)
     
     return tf.keras.Model(x, out)
 

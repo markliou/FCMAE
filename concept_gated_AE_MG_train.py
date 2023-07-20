@@ -28,6 +28,7 @@ def bean_img_iter(bs = 32):
 def mask_iter(bs = 32, img_shape = (128, 128), split = (16, 16), masking_ratio = .75):
     # ds = concept_gated_conv.mask_dataset_generator(img_shape, split, masking_ratio)
     ds = concept_gated_conv.mask_tensor_dataset(img_shape, split, masking_ratio, 10000)
+    # ds = concept_gated_conv.mask_tensor_dataset(img_shape, split, masking_ratio, 10)
     # ds = ds.batch(bs, drop_remainder=True, num_parallel_calls=tf.data.AUTOTUNE)
     ds = ds.batch(bs, drop_remainder=True, num_parallel_calls=10)
     ds = ds.shuffle(256, reshuffle_each_iteration=True)
@@ -94,6 +95,7 @@ def training_step(ds, mask, step, batch_size, shad_size):
     # mask = tf.keras.layers.RandomRotation(0.05, fill_mode='constant')(mask)
     mask = tf.image.rot90(mask, k = step % 4)
     
+    ds_o = ds
     ds = (tf.cast(ds, tf.float32) - 128.) / 128.
     # masked_ds = concept_gated_conv.masking_img(ds ,(16, 16), .75) * ds # mased ratio of 75% from MAE
     masked_ds = mask * ds
@@ -103,10 +105,13 @@ def training_step(ds, mask, step, batch_size, shad_size):
         reconstructed_img = cgae(masked_ds)
         # reconstructed_img = cgae(ds)
         
-        ae_loss = tf.keras.losses.MeanSquaredError(tf.keras.losses.Reduction.SUM)(reconstructed_img, ds) 
-        ae_loss += tf.keras.losses.MeanAbsoluteError(tf.keras.losses.Reduction.SUM)(reconstructed_img, ds) 
+        # ae_loss = tf.keras.losses.MeanSquaredError(tf.keras.losses.Reduction.SUM)(reconstructed_img, ds) 
+        # ae_loss += tf.keras.losses.MeanAbsoluteError(tf.keras.losses.Reduction.SUM)(reconstructed_img, ds) 
         
         # ae_loss = tf.math.reduce_mean(tf.math.pow((reconstructed_img - ds), 2))
+        
+        ## corss-entropy
+        ae_loss = tf.keras.losses.SparseCategoricalCrossentropy(True, None, tf.keras.losses.Reduction.SUM)(ds_o, reconstructed_img)
         
         total_loss = ae_loss / (batch_size * 128 * 128) + tf.reduce_sum(cgae.losses) / shad_size
         
@@ -117,6 +122,10 @@ def training_step(ds, mask, step, batch_size, shad_size):
     
     if step % 100 == 0:
         reconstructed_img = cgae(masked_ds)
+        ### for cross-entropy ##
+        reconstructed_img = tf.argmax(reconstructed_img, axis=-1) 
+        reconstructed_img = (tf.cast(reconstructed_img, tf.float32) - 128.) / 128.
+        ########################
         img_array = reconstructed_img[0].numpy()
         dsimg_array = ds[0].numpy()
         masked_ds_array = masked_ds[0].numpy()
