@@ -84,7 +84,7 @@ def concept_gated_conv_unet_ae():
     out = tf.keras.layers.LayerNormalization(axis=(-1, -2, -3))(dconv3)
     out = tf.keras.layers.Conv2D(64, (11,11), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(out)
     out = tf.keras.layers.LayerNormalization(axis=(-1, -2, -3))(out)
-    out = tf.keras.layers.Conv2D(32, (5,5), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(out)
+    out = tf.keras.layers.Conv2D(32, (7,7), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(out)
     out = tf.keras.layers.LayerNormalization(axis=(-1, -2, -3))(out)
     out = tf.keras.layers.Conv2D(16, (3,3), padding="Same", kernel_regularizer=tf.keras.regularizers.L2(1e-3), activation=mish)(out)
     out = tf.keras.layers.LayerNormalization(axis=(-1, -2, -3))(out)
@@ -143,12 +143,12 @@ def concept_merging_conv_block(x, channel_no, inputConcept):
 def concept_extract_conv(x, channel_no):
     x_shape = x.shape
     blank = tf.zeros([1, x_shape[1], x_shape[2], channel_no], dtype=tf.float32)
-    concept = concept_gated_conv(x, tf.stop_gradient(blank), 3, channel_no)
+    concept = concept_gated_conv(x, tf.stop_gradient(blank), 11, channel_no)
     
     return tf.math.reduce_mean(concept, axis=[1, 2], keepdims=True)
 
 def concept_injection_conv(x, concept, channel_no):
-    feature = concept_gated_conv(x, concept, 3, channel_no)
+    feature = concept_gated_conv(x, concept, 11, channel_no)
     return feature
 
 def concept_gated_conv(x, concept, kernel_size, channel_no):

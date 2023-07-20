@@ -92,7 +92,7 @@ def training_step(ds, mask, step, batch_size, shad_size):
     
     mask = tf.keras.layers.RandomFlip("horizontal_and_vertical")(mask)
     # mask = tf.keras.layers.RandomRotation(0.05, fill_mode='constant')(mask)
-    mask = tf.image.rot90(mask, k=step%4)
+    mask = tf.image.rot90(mask, k = step % 4)
     
     ds = (tf.cast(ds, tf.float32) - 128.) / 128.
     # masked_ds = concept_gated_conv.masking_img(ds ,(16, 16), .75) * ds # mased ratio of 75% from MAE
