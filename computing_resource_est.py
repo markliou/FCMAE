@@ -12,6 +12,7 @@ def main():
     
     flops = tf.profiler.profile(graph=K.get_session().graph, run_meta=run_meta, cmd='op', options=opts)
     
+    print(model.summary())
     print("model Gflops: {}".format(flops.total_float_ops / 1E9))
     
 if __name__ == "__main__":

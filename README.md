@@ -2,7 +2,7 @@
 try to use the fully convolution for masked autoencoder task
 
 ## Todo
-[] GFLOP estimating
+- [x] GFLOP estimating
 
 ## references
 1. https://arxiv.org/abs/2301.03580
