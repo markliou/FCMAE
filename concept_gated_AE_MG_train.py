@@ -80,6 +80,7 @@ def img_aug(mask_img=False):
     model = tf.keras.Sequential()
     if mask_img == False:
         model.add(tf.keras.layers.RandomFlip("horizontal_and_vertical"))
+        model.add(tf.keras.layers.RandomRotation(1, fill_mode='nearest'))
         # ds = tf.keras.layers.RandomRotation(0.05, fill_mode='nearest')(ds) # no rotating from MAE
         model.add(tf.keras.layers.RandomBrightness(factor=0.2))
         model.add(tf.keras.layers.RandomContrast(.2))
@@ -89,6 +90,7 @@ def img_aug(mask_img=False):
             (0, -.5), (0, -.5), fill_mode='nearest'))  # only zoom-in from MAE
     else:
         # mask = tf.keras.layers.RandomRotation(0.05, fill_mode='constant')(mask)
+        model.add(tf.keras.layers.RandomRotation(1, fill_mode='nearest'))
         model.add(tf.keras.layers.RandomFlip("horizontal_and_vertical"))
 
     return model
@@ -119,11 +121,11 @@ def training_step(ds, mask, step, batch_size, shad_size):
     ds = tf.image.resize(ds['image'], (128, 128))
     # augmentation
     ds = imgAug(ds)
-    ds = tf.image.rot90(ds, k=step % 4)
+    # ds = tf.image.rot90(ds, k=step % 4)
 
     # mask = tf.keras.layers.RandomRotation(0.05, fill_mode='constant')(mask)
     mask = maskAug(mask)
-    mask = tf.image.rot90(mask, k=step % 4)
+    # mask = tf.image.rot90(mask, k=step % 4)
 
     ds_o = ds
     ds = (tf.cast(ds, tf.float32) - 128.) / 128.
@@ -180,6 +182,11 @@ def training_step(ds, mask, step, batch_size, shad_size):
 for step in range(opt_steps):
     ds = next(dsIter)
     mask = next(maskIter)
+
+    # ds = mirrored_strategy.run(tf.image.rot90, args=(ds, step % 4))
+    # mask = mirrored_strategy.run(tf.image.rot90, args=(mask, step % 4))
+    # ds = tf.image.rot90(ds, k=step % 4)
+    # mask = tf.image.rot90(mask, k=step % 4)
 
     per_replica_losses = mirrored_strategy.run(
         training_step, args=(ds, mask, step, batch_size, shad_size))
