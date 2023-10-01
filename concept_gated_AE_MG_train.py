@@ -36,8 +36,7 @@ def mask_iter(bs=32, img_shape=(128, 128), split=(16, 16), masking_ratio=.75):
     # ds = concept_gated_conv.mask_dataset_generator(img_shape, split, masking_ratio)
     ds = concept_gated_conv.mask_tensor_dataset(
         img_shape, split, masking_ratio, 10000)
-    # ds = concept_gated_conv.mask_tensor_dataset(
-    #     img_shape, split, masking_ratio, 10)
+    # ds = concept_gated_conv.mask_tensor_dataset( img_shape, split, masking_ratio, 10)
     # ds = ds.batch(bs, drop_remainder=True, num_parallel_calls=tf.data.AUTOTUNE)
     ds = ds.batch(bs, drop_remainder=True, num_parallel_calls=10)
     ds = ds.shuffle(256, reshuffle_each_iteration=True)
@@ -189,12 +188,19 @@ def output_img(ds, mask):
     masked_ds_img.save('ds_mased_current.jpg')
 
 
+@tf.function(reduce_retracing=True)
+def update_model(ds, mask, step, batch_size, shad_size):
+    per_replica_losses = mirrored_strategy.run(
+        training_step, args=(ds, mask, step, batch_size, shad_size))
+    return per_replica_losses
+
+
 for step in range(opt_steps):
     ds = next(dsIter)
     mask = next(maskIter)
 
-    per_replica_losses = mirrored_strategy.run(
-        training_step, args=(ds, mask, step, batch_size, shad_size))
+    # per_replica_losses = mirrored_strategy.run(training_step, args=(ds, mask, step, batch_size, shad_size))
+    per_replica_losses = update_model(ds, mask, step, batch_size, shad_size)
     # per_replica_losses = mirrored_strategy.run(training_step, args=(ds, step, batch_size, shad_size))
 
     # total_loss = mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
