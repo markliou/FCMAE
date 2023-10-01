@@ -23,9 +23,11 @@ def bean_img_iter(bs=32):
     dataset = dataset.batch(bs, drop_remainder=True, num_parallel_calls=10)
     dataset = dataset.repeat()
     dataset = dataset.shuffle(256, reshuffle_each_iteration=True)
-    dataset = dataset.prefetch(tf.data.AUTOTUNE)
+    # dataset = dataset.prefetch(tf.data.AUTOTUNE)
+    dataset = dataset.prefetch(4)
 
-    dataset = mirrored_strategy.experimental_distribute_dataset(dataset)
+    with mirrored_strategy.scope():
+        dataset = mirrored_strategy.experimental_distribute_dataset(dataset)
 
     return dataset
 
@@ -34,16 +36,19 @@ def bean_img_iter(bs=32):
 
 def mask_iter(bs=32, img_shape=(128, 128), split=(16, 16), masking_ratio=.75):
     # ds = concept_gated_conv.mask_dataset_generator(img_shape, split, masking_ratio)
+    # ds = concept_gated_conv.mask_tensor_dataset(
+    #     img_shape, split, masking_ratio, 10000)
     ds = concept_gated_conv.mask_tensor_dataset(
-        img_shape, split, masking_ratio, 10000)
-    # ds = concept_gated_conv.mask_tensor_dataset( img_shape, split, masking_ratio, 10)
+        img_shape, split, masking_ratio, 10)
     # ds = ds.batch(bs, drop_remainder=True, num_parallel_calls=tf.data.AUTOTUNE)
     ds = ds.batch(bs, drop_remainder=True, num_parallel_calls=10)
     ds = ds.shuffle(256, reshuffle_each_iteration=True)
     ds = ds.repeat()
-    ds = ds.prefetch(tf.data.AUTOTUNE)
+    # ds = ds.prefetch(tf.data.AUTOTUNE)
+    ds = ds.prefetch(4)
 
-    ds = mirrored_strategy.experimental_distribute_dataset(ds)
+    with mirrored_strategy.scope():
+        ds = mirrored_strategy.experimental_distribute_dataset(ds)
 
     return ds
 
@@ -96,7 +101,7 @@ def img_aug(mask_img=False):
     return model
 
 
-batch_size = 128
+batch_size = 8
 shad_size = 2  # gpu number
 opt_steps = 5000000
 lr = 1e-4
@@ -196,15 +201,17 @@ def update_model(ds, mask, step, batch_size, shad_size):
 
 
 for step in range(opt_steps):
-    ds = next(dsIter)
-    mask = next(maskIter)
+    with mirrored_strategy.scope():
+        ds = next(dsIter)
+        mask = next(maskIter)
 
-    # per_replica_losses = mirrored_strategy.run(training_step, args=(ds, mask, step, batch_size, shad_size))
-    per_replica_losses = update_model(ds, mask, step, batch_size, shad_size)
-    # per_replica_losses = mirrored_strategy.run(training_step, args=(ds, step, batch_size, shad_size))
+        # per_replica_losses = mirrored_strategy.run(training_step, args=(ds, mask, step, batch_size, shad_size))
+        per_replica_losses = update_model(
+            ds, mask, step, batch_size, shad_size)
+        # per_replica_losses = mirrored_strategy.run(training_step, args=(ds, step, batch_size, shad_size))
 
-    # total_loss = mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
-    # print("step:{} loss:{}".format(step,total_loss.numpy()))
+        # total_loss = mirrored_strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
+        # print("step:{} loss:{}".format(step,total_loss.numpy()))
 
     if step % 100 == 0:
         total_loss = mirrored_strategy.reduce(
