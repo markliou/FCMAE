@@ -88,6 +88,7 @@ def img_aug(mask_img=False):
         model.add(tf.keras.layers.RandomZoom(
             (0, -.5), (0, -.5), fill_mode='nearest'))  # only zoom-in from MAE
     else:
+        # mask = tf.keras.layers.RandomRotation(0.05, fill_mode='constant')(mask)
         model.add(tf.keras.layers.RandomFlip("horizontal_and_vertical"))
 
     return model
@@ -117,18 +118,9 @@ with mirrored_strategy.scope():
 def training_step(ds, mask, step, batch_size, shad_size):
     ds = tf.image.resize(ds['image'], (128, 128))
     # augmentation
-    # ds = tf.keras.layers.RandomFlip("horizontal_and_vertical")(ds)
-    # # ds = tf.keras.layers.RandomRotation(0.05, fill_mode='nearest')(ds) # no rotating from MAE
-    # ds = tf.keras.layers.RandomBrightness(factor=0.2)(ds)
-    # ds = tf.keras.layers.RandomContrast(.2)(ds)
-    # ds = tf.keras.layers.RandomTranslation(
-    #     (.05), (.05), fill_mode='nearest')(ds)
-    # ds = tf.keras.layers.RandomZoom(
-    #     (0, -.5), (0, -.5), fill_mode='nearest')(ds)  # only zoom-in from MAE
     ds = imgAug(ds)
     ds = tf.image.rot90(ds, k=step % 4)
 
-    # mask = tf.keras.layers.RandomFlip("horizontal_and_vertical")(mask)
     # mask = tf.keras.layers.RandomRotation(0.05, fill_mode='constant')(mask)
     mask = maskAug(mask)
     mask = tf.image.rot90(mask, k=step % 4)
