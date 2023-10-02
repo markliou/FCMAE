@@ -3,15 +3,25 @@
 # FROM tensorflow/tensorflow:1.14.0-gpu-py3
 # FROM tensorflow/tensorflow:latest-gpu
 # FROM tensorflow/tensorflow:1.15.0-gpu-py3
-# FROM tensorflow/tensorflow:2.11.0-gpu
-FROM tensorflow/tensorflow:2.12.0-gpu
+FROM tensorflow/tensorflow:2.13.0-gpu
+# FROM tensorflow/tensorflow:2.12.0-gpu
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TF_FORCE_GPU_ALLOW_GROWTH=true
 
+# upgrade python to 3.11 and reinstall tensorflow
+RUN python -m pip uninstall tensorflow -y;\
+    add-apt-repository ppa:deadsnakes/ppa -y &&  apt-get update -y;\
+    apt-get install python3.11 -y;\
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1;\
+    update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1;\
+    apt-get install python3-pip -y ;\
+    apt-get install python3.11-distutils -y;\
+    curl -sS https://bootstrap.pypa.io/get-pip.py | python3 ;\
+    python3 -m pip install html5lib ;\
+    python3 -m pip install tensorflow
+
 RUN apt update -y;\
-    # add-apt-repository ppa:jonathonf/python-3.6 -y;\
-    # apt update -y;\
     apt install tzdata -y;\
     apt install python3-opencv -y --fix-missing
 
@@ -19,6 +29,9 @@ RUN apt update -y;\
 RUN pip install --upgrade pip
 # RUN pip install "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 RUN pip install --upgrade "jax[cuda11_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+
+# installing keras-core
+RUN pip install --upgrade keras-core
 
 RUN apt update -y;\
     apt install python3-pip -y;\
