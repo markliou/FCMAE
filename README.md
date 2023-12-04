@@ -10,14 +10,15 @@ try to use the fully convolution for masked autoencoder task
 
 The original picture:
 
-![original](current.jpg)
+![original](dscurrent.jpg)
 
 The masked picture:
 
 ![maksed](ds_mased_current.jpg)
 
 The recoveried picture:
-![recoveried](dscurrent.jpg)
+
+![recoveried](current.jpg)
 
 ## references
 
