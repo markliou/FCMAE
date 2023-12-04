@@ -160,4 +160,8 @@ cython_debug/
 #.idea/
 
 *.jpg
+!current.jpg
+!ds_mased_current.jpg
+!dscurrent.jpg
 models/*
+%workspace%git_repos%FCMAE/*
