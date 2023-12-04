@@ -1,0 +1,6 @@
+[submodule "models/FCMAE"]
+	path = models/FCMAE
+	url = https://huggingface.co/markliou/FCMAE
+[submodule "FCMAE_models"]
+	path = FCMAE_models
+	url = https://huggingface.co/markliou/FCMAE_models
